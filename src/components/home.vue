@@ -15,32 +15,34 @@
       <el-col :span="8">
         <el-card shadow="always">
           <div slot="header">
-            <span>订单总数</span>
+            <span>总收入</span>
           </div>
           <div>
-            <span>12</span>
+            <span>¥{{ total_prices.pice__sum }}</span>
           </div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="always">
           <div slot="header">
-            <span>订单总数</span>
+            <span>未打印单数</span>
           </div>
           <div>
-            <span>12</span>
+            <span>{{ num_untreated }}</span>
           </div>
         </el-card>
       </el-col>
     </el-row>
     <div style="height: 60px"></div>
     <!--搜索框-->
-    <el-input placeholder="请输入内容" class="input-with-select" v-model="input" clearable size="mini">
-      <el-button slot="append" icon="el-icon-search"></el-button>
+    <el-input placeholder="请输入内容" class="input-with-select" v-model="search" clearable size="mini">
+      <el-button slot="append" @click="Search" icon="el-icon-search"></el-button>
     </el-input>
     <!--内容表格-->
+    <!--搜索后-->
     <el-table
-        :data="tableData"
+        v-if="searchData.length>0"
+        :data="searchData"
         border
         :header-cell-style="{background:'#000', color:'#fff'}"
         style="width: 95%;margin: 40px;">
@@ -64,7 +66,57 @@
           label="手机号">
       </el-table-column>
       <el-table-column
-          prop="ordermumber"
+          prop="random"
+          label="订单号">
+      </el-table-column>
+      <el-table-column
+          prop="status"
+          label="状态"
+          width="180"
+          filter-placement="bottom-end">
+        <template slot-scope="scope">
+          <el-tag v-if="scope.row.status === '未打印'" :type="'danger'" disable-transitions>{{ scope.row.status }}</el-tag>
+          <el-tag v-if="scope.row.status === '已打印'" :type="'success'" disable-transitions>{{ scope.row.status }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column
+          fixed="right"
+          label="操作"
+          width="180">
+        <template slot-scope="scope">
+          <el-button @click="handleClick(scope)" type="text" size="small">查看</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <!--搜索前-->
+    <el-table
+        v-else
+        :data="tableData"
+        border
+        :header-cell-style="{background:'#000', color:'#fff'}"
+        style="width: 95%;margin: 40px;">
+      <el-table-column
+          prop="id"
+          label="#"
+          width="180">
+      </el-table-column>
+      <el-table-column
+          prop="time"
+          label="时间"
+          width="180">
+      </el-table-column>
+      <el-table-column
+          prop="pice"
+          label="价格"
+          width="180">
+      </el-table-column>
+      <el-table-column
+          prop="phone"
+          label="手机号">
+      </el-table-column>
+      <el-table-column
+          prop="random"
           label="订单号">
       </el-table-column>
       <el-table-column
@@ -114,13 +166,15 @@
 </template>
 
 <script>
+
 export default {
   name: "home",
   data() {
     return {
       /*搜索框数据*/
-      input:"",
-      tableData: [],
+      search: "",
+      searchData: [],  /*搜索数据*/
+      tableData: [],  // 原本展示数据
       /*弹窗信息*/
       gridData: [],
       /*当前弹窗的id*/
@@ -128,14 +182,21 @@ export default {
       /*弹窗对应的订单id信息*/
       ordeid: "",
       dialogTableVisible: false,
+      /*总价*/
+      total_prices: "0",
+      /*未打印单数*/
+      num_untreated: '0',
     }
   },
   //生命周期函数
   created() {
-    this.axios.get('http://127.0.0.1:8000/win/').then((response) => {
-      this.tableData = response.data.data
+    //获取数据库数据
+       this.axios.get('http://127.0.0.1:8000/win/').then((response) => {
+        this.tableData = response.data.data //订单数据
+        this.total_prices = response.data.total_prices  //总价
+        this.num_untreated = response.data.num_untreated //未打印单数
+      })
       console.log(this.tableData)
-    })
   },
   methods: {
     //打开弹窗:查看按钮
@@ -190,16 +251,30 @@ export default {
         type: 'success'
       });
     },
+    //搜索按钮
+    Search() {
+      const search = this.search;
+      if (search) {
+        this.searchData = this.tableData.filter(function (product) {
+          console.log(product)
+          return Object.keys(product).some(function (key) {
+            console.log(key)
+            return String(product[key]).toLowerCase().indexOf(search) > -1
+          })
+        })
+      }
+    },
   },
 }
 </script>
 
 <style scoped>
-.el-input{
-  width:300px;
+.el-input {
+  width: 300px;
   position: absolute;
-  right:40px;
+  right: 40px;
 }
+
 .el-col {
   height: 160px;
 }
