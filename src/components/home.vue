@@ -92,7 +92,7 @@
     <!--搜索前-->
     <el-table
         v-else
-        :data="tableData"
+        :data="dataShow"
         border
         :header-cell-style="{background:'#000', color:'#fff'}"
         style="width: 95%;margin: 40px;">
@@ -126,9 +126,7 @@
           filter-placement="bottom-end">
         <template slot-scope="scope">
           <el-tag v-if="scope.row.status === '未打印'" :type="'danger'" disable-transitions>{{ scope.row.status }}</el-tag>
-          <el-tag v-if="scope.row.status === '已打印'" :type="'success'" disable-transitions>{{
-              scope.row.status
-            }}
+          <el-tag v-if="scope.row.status === '已打印'" :type="'success'" disable-transitions>{{scope.row.status }}
           </el-tag>
         </template>
       </el-table-column>
@@ -141,6 +139,14 @@
         </template>
       </el-table-column>
     </el-table>
+    <!--分页-->
+    <el-pagination
+        background
+        layout="prev, pager, next"
+        :page-size="pageSize"
+        @current-change="CurrentChange"
+        :page-count="pageNum">
+    </el-pagination>
     <!--弹窗界面-->
     <el-dialog @close="handleClose" title="订单详情" :visible.sync="dialogTableVisible">
       <el-table :data="gridData">
@@ -186,17 +192,37 @@ export default {
       total_prices: "0",
       /*未打印单数*/
       num_untreated: '0',
+      /***********************************分页数据********************************/
+      // 所有页面的数据
+      totalPage: [],
+      // 每页显示数量
+      pageSize: 10,
+      // 共几页
+      pageNum: 1,
+      // 当前显示的数据
+      dataShow: [],
+      // 默认当前显示第一页
+      currentPage: 0
     }
   },
   //生命周期函数
   created() {
     //获取数据库数据
-       this.axios.get('http://127.0.0.1:8000/win/').then((response) => {
-        this.tableData = response.data.data //订单数据
-        this.total_prices = response.data.total_prices  //总价
-        this.num_untreated = response.data.num_untreated //未打印单数
-      })
-      console.log(this.tableData)
+    this.axios.get('http://127.0.0.1:8000/win/').then((response) => {
+      this.tableData = response.data.data //订单数据
+      this.total_prices = response.data.total_prices  //总价
+      this.num_untreated = response.data.num_untreated //未打印单数
+      this.pageNum = Math.ceil(this.tableData.length / this.pageSize) || 1 //计算一共将数据分多少页
+      console.log("一个共分了"+this.pageNum+"页")
+      for (let i = 0; i < this.pageNum; i++) {
+        //将数据库数据按每页10个分割
+        this.totalPage[i] = this.tableData.slice(this.pageSize * i, this.pageSize * (i + 1))
+      }
+      //获得数据显示第一行
+      this.dataShow = this.totalPage[this.currentPage]
+      
+    })
+    console.log(this.tableData)
   },
   methods: {
     //打开弹窗:查看按钮
@@ -264,6 +290,15 @@ export default {
         })
       }
     },
+    //换页
+    CurrentChange(val){
+      console.log(`当前页: ${val}`);
+      for (let i = 0; i < this.pageNum; i++) {
+        //将数据库数据按每页10个分割
+        this.totalPage[i] = this.tableData.slice(this.pageSize * i, this.pageSize * (i + 1))
+      }
+      this.dataShow = this.totalPage[`${val}`-1]//需要-1不然有bug
+    }
   },
 }
 </script>
@@ -295,6 +330,12 @@ export default {
 .el-card__body {
   height: 100%;
   width: auto;
+}
+/**分页**/
+.el-pagination{
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%,-50%);/*设置在页面居中*/
 }
 
 </style>
